@@ -32,28 +32,40 @@ import {
 interface ManualSchedulingGridProps {
   // List of subject-teacher pairs available for scheduling
   subjectTeacherPairs: SubjectTeacherPair[];
-  // Available free hour types with optional custom types
-  freeHours: { type: FreeHourType, customType?: string }[];
-  // Configuration for days of the week
-  dayOptions: { 
-    fourContinuousDays: boolean;    // For 4th year special scheduling
-    useCustomDays: boolean;         // Enable custom day selection
-    selectedDays: Day[];            // List of selected days when custom
+  // Year of the timetable
+  year: YearType;
+  // Optional existing entries for editing mode
+  initialEntries?: TimetableEntry[];
+  // Callback when entries change
+  onEntriesChange: (entries: TimetableEntry[]) => void;
+  // Available free hour types (optional with default)
+  freeHours?: { type: FreeHourType, customType?: string }[];
+  // Configuration for days of the week (optional with default)
+  dayOptions?: { 
+    fourContinuousDays: boolean;
+    useCustomDays: boolean;
+    selectedDays: Day[];
   };
-  year: YearType;                   // Academic year
-  branch: BranchType;               // Branch/Department
-  onSave: (entries: TimetableEntry[]) => void;  // Callback when entries change
-  existingEntries?: TimetableEntry[];           // Pre-existing schedule entries
+  // Branch/Department (optional)
+  branch?: BranchType;
 }
 
 const ManualSchedulingGrid: React.FC<ManualSchedulingGridProps> = ({ 
   subjectTeacherPairs, 
-  freeHours, 
-  dayOptions,
   year,
-  branch,
-  onSave,
-  existingEntries = []
+  initialEntries = [],
+  onEntriesChange,
+  freeHours = [
+    { type: 'Library' as FreeHourType },
+    { type: 'Sports' as FreeHourType },
+    { type: 'Project' as FreeHourType }
+  ],
+  dayOptions = {
+    fourContinuousDays: false,
+    useCustomDays: false,
+    selectedDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday'] as Day[]
+  },
+  branch
 }) => {
   const [entries, setEntries] = useState<TimetableEntry[]>([]);
   const { toast } = useToast();
@@ -107,13 +119,13 @@ const ManualSchedulingGrid: React.FC<ManualSchedulingGridProps> = ({
   
   // Initialize grid entries from existing data or create empty grid
   useEffect(() => {
-    if (existingEntries && existingEntries.length > 0) {
-      console.log("Using existing entries:", existingEntries.length);
+    if (initialEntries && initialEntries.length > 0) {
+      console.log("Using existing entries:", initialEntries.length);
       
       // Filter entries to match current day selection
-      const filteredEntries = existingEntries.filter(entry => days.includes(entry.day));
+      const filteredEntries = initialEntries.filter(entry => days.includes(entry.day));
       
-      const initialEntries: TimetableEntry[] = [];
+      const initialGridEntries: TimetableEntry[] = [];
       
       // Create grid with existing entries or empty slots
       days.forEach(day => {
@@ -123,9 +135,9 @@ const ManualSchedulingGrid: React.FC<ManualSchedulingGridProps> = ({
           );
           
           if (existingEntry) {
-            initialEntries.push(existingEntry);
+            initialGridEntries.push(existingEntry);
           } else {
-            initialEntries.push({
+            initialGridEntries.push({
               day,
               timeSlot,
               // Empty slot
@@ -134,16 +146,16 @@ const ManualSchedulingGrid: React.FC<ManualSchedulingGridProps> = ({
         });
       });
       
-      setEntries(initialEntries);
+      setEntries(initialGridEntries);
       return;
     }
     
     // Create empty grid if no existing entries
-    const initialEntries: TimetableEntry[] = [];
+    const initialGridEntries: TimetableEntry[] = [];
     
     days.forEach(day => {
       timeSlots.forEach(timeSlot => {
-        initialEntries.push({
+        initialGridEntries.push({
           day,
           timeSlot,
           // Empty slot
@@ -151,15 +163,15 @@ const ManualSchedulingGrid: React.FC<ManualSchedulingGridProps> = ({
       });
     });
     
-    setEntries(initialEntries);
-  }, [existingEntries, days, year, dayOptions]);
+    setEntries(initialGridEntries);
+  }, [initialEntries, days, year, dayOptions]);
   
   // Save entries whenever they change
   useEffect(() => {
     if (entries.length > 0) {
-      onSave(entries);
+      onEntriesChange(entries);
     }
-  }, [entries, onSave]);
+  }, [entries, onEntriesChange]);
 
   // Check for teacher scheduling conflicts
   const checkTeacherConflicts = (day: Day, timeSlot: TimeSlot, teacherName: string): boolean => {

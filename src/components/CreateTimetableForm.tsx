@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useNavigate } from 'react-router-dom';
@@ -37,7 +36,8 @@ import {
   FreeHourType, 
   SubjectTeacherPair,
   TimetableFormData,
-  Timetable
+  Timetable,
+  TimetableEntry
 } from '@/utils/types';
 import { generateTimetable, saveTimetable, countNonLabSubjectsForTeacher, doesTimetableExist } from '@/utils/timetableUtils';
 import { getFaculty } from '@/utils/facultyUtils';
@@ -103,7 +103,7 @@ const CreateTimetableForm: React.FC<CreateTimetableFormProps> = ({ existingTimet
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentStep, setCurrentStep] = useState(0);
   
-  const [manualTimetableEntries, setManualTimetableEntries] = useState([]);
+  const [manualTimetableEntries, setManualTimetableEntries] = useState<TimetableEntry[]>([]);
   
   const [manualEntriesInitialized, setManualEntriesInitialized] = useState(false);
   
@@ -112,7 +112,6 @@ const CreateTimetableForm: React.FC<CreateTimetableFormProps> = ({ existingTimet
   useEffect(() => {
     const faculty = getFaculty();
     
-    // Get workload information for each faculty
     const workloadInfo = {};
     faculty.forEach(f => {
       const { isAvailable, currentCount } = isFacultyAvailableForSubjects(f.name);
@@ -247,7 +246,6 @@ const CreateTimetableForm: React.FC<CreateTimetableFormProps> = ({ existingTimet
       return;
     }
     
-    // Check global faculty workload limit - only for non-lab subjects
     if (!isLabSubject) {
       const teachersToCheck = multipleTeachers ? [newTeacher, newTeacher2] : [newTeacher];
       const overloadedFaculty = [];
@@ -291,7 +289,6 @@ const CreateTimetableForm: React.FC<CreateTimetableFormProps> = ({ existingTimet
       subjectTeacherPairs: [...prev.subjectTeacherPairs, newPair]
     }));
     
-    // Update faculty workload in state - only for non-lab subjects
     if (!isLabSubject) {
       const updatedWorkload = {...facultyWorkload};
       teacherNames.forEach(teacher => {
@@ -548,8 +545,11 @@ const CreateTimetableForm: React.FC<CreateTimetableFormProps> = ({ existingTimet
     );
   };
 
-  // Function to handle manual timetable entries changes
-  const handleManualEntriesChange = (entries) => {
+  const handleFreeHourTypeChange = (value: string) => {
+    setNewFreeHourType(value as FreeHourType);
+  };
+
+  const handleManualEntriesChange = (entries: TimetableEntry[]) => {
     setManualTimetableEntries(entries);
   };
 
@@ -1041,7 +1041,7 @@ const CreateTimetableForm: React.FC<CreateTimetableFormProps> = ({ existingTimet
                               <Label htmlFor="newFreeHourType">Free Hour Type</Label>
                               <Select
                                 value={newFreeHourType}
-                                onValueChange={setNewFreeHourType}
+                                onValueChange={handleFreeHourTypeChange}
                               >
                                 <SelectTrigger id="newFreeHourType">
                                   <SelectValue placeholder="Select Type" />
@@ -1205,6 +1205,9 @@ const CreateTimetableForm: React.FC<CreateTimetableFormProps> = ({ existingTimet
                             year={formData.year}
                             initialEntries={manualTimetableEntries}
                             onEntriesChange={handleManualEntriesChange}
+                            freeHours={formData.freeHours}
+                            dayOptions={formData.dayOptions}
+                            branch={formData.branch}
                           />
                         </CardContent>
                       </Card>
